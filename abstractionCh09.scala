@@ -54,3 +54,54 @@ object secondFileMatcher extends FileMatcher {
 test(secondFileMatcher)
 
 
+def containsNeg(nums: Seq[Int]) = nums.exists(_ < 0)
+
+assert(containsNeg(Array(0, -1, 2)))
+assert(!containsNeg(Array(0, 1, 2)))
+
+def containsOdd(nums: Seq[Int]) = nums.exists(_ % 2 == 1)
+
+assert(containsOdd(Array(0, 2, 3, 4)))
+assert(!containsNeg(Array(0, 2, 4, 6)))
+
+
+//  Currying
+
+def curriedAdd(x: Int)(y: Int): Int = x + y
+
+assert(curriedAdd(4)(5) == 9)
+
+val add4 = curriedAdd(4)(_)
+
+assert(add4(5) == 9)
+
+// creating contexts
+
+import java.io.PrintWriter
+
+def withPrintWriter(filename: String, op: PrintWriter => Unit) {
+	val writer = new PrintWriter(filename)
+	try {
+		op(writer)
+	} finally {
+		writer.close()
+	}
+}
+
+withPrintWriter("thefile", _.write("hello world!\n"))
+
+def withCurriedPrintWriter(
+		filename: String
+	)(op: PrintWriter => Unit) {
+		val writer = new PrintWriter(filename)
+		try {
+			op(writer)
+		} finally {
+			writer.close()
+		}
+	}
+
+withCurriedPrintWriter("theDate") {
+	writer => writer.println(new java.util.Date)
+}
+
