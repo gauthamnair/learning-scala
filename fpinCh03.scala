@@ -5,10 +5,32 @@ case class Cons[T](head: T, tail: List[T]) extends List[T]
 case object Nil extends List[Nothing]
 
 object List {
-	def sum(as: List[Int]): Int = as match {
+	def sumRecurse(as: List[Int]): Int = as match {
 		case Cons(x, xs) => x + sum(xs)
 		case Nil => 0
 	}
+
+	def sum(as: List[Int]): Int = foldRight(as, 0)(_ + _)
+
+	def lazyMultiply(a: Double, b: => Double): Double = {
+		if (a == 0.0) 0.0 else {
+			println(a.toString + "*" + b.toString)
+			a * b
+		}
+	}
+
+	def product(as: List[Double]): Double = foldRight(as, 1.0)(_ * _)
+
+	def productStopIf0Recurse(as: List[Double]): Double = 
+		as match {
+			case Nil => 1.0
+			case Cons(x, rest) => {
+				if (x != 0.0) x * productStopIf0(rest) else 0
+			}
+		}
+
+	def productStopIf0(as: List[Double]): Double = 
+		foldRight(as, 1.0)(lazyMultiply(_, _))
 
 	def apply[T](as: T*): List[T] = {
 		if (as.isEmpty) Nil
@@ -28,6 +50,17 @@ object List {
 			}
 		} else Some(as)
 
+	def foldRight[T, R](as: List[T], zero: R)
+						(op: (T, R) => R): R =
+		as match {
+			case Nil => zero
+			case Cons(x, rest) => {
+				println("requesting op with first arg:" + x.toString)
+				lazy val remaining = foldRight(rest, zero)(op)
+				op(x, remaining)
+			}
+		}
+
 	def init[T](as: List[T]): Option[List[T]] =
 		as match {
 			case Cons(y, Nil) => Some(Nil)
@@ -35,6 +68,7 @@ object List {
 			case Nil => None
 		}
 
+	@annotation.tailrec
 	def dropWhile[T](as: List[T])
 		(shouldDrop: T => Boolean): List[T] = 
 		as match {
