@@ -85,6 +85,8 @@ object testCompose {
 		val doubleValue: Int => Int = _ * 2
 		val addOneAndDouble = compose(doubleValue, addOne)
 		assert(addOneAndDouble(1) == 4)
+		
 	}
 }
 testCompose.test
+
