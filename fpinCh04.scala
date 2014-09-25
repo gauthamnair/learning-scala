@@ -1,8 +1,5 @@
 
 
-
-
-
 sealed trait Option[+T] {
 	def map[R](f: T => R): Option[R]
 	def flatMap[R](f: T => Option[R]): Option[R]
@@ -78,3 +75,34 @@ object ex41 {
 	}
 }
 ex41.test
+
+object ex42 {
+	def mean(xs:Seq[Double]): Option[Double] = 
+		if (xs.isEmpty) None
+		else Some(xs.sum / xs.length)
+
+	def summedSquareDev(xs:Seq[Double], center:Double): Double =
+		xs.map(_ - center).map((x) => x * x).sum
+
+	def normalizedSampleSquareDev(xs:Seq[Double], 
+								center:Double): Option[Double] =
+		if (xs.length <= 1) None
+		else Some(summedSquareDev(xs, center)/(xs.length - 1))
+
+	def sampleVariance(xs: Seq[Double]): Option[Double] =
+		mean(xs).flatMap(normalizedSampleSquareDev(xs, _))
+		
+
+	def test {
+		val xs = List(1.0, 2.0)
+		assert(mean(xs) == Some(1.5))
+		assert(mean(List(1.0)) == Some(1.0))
+		assert(mean(List(): Seq[Double]) == None)
+
+		assert(sampleVariance(xs) == Some(0.5))
+		assert(sampleVariance(List(1.0)) == None)
+		assert(sampleVariance(List(): Seq[Double]) == None)
+	}
+}
+ex42.test
+
