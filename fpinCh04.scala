@@ -119,3 +119,20 @@ object ex43{
 	}
 }
 ex43.test
+
+
+object ex44{
+	import ex43.map2
+	def sequence[T](xos: List[Option[T]]): Option[List[T]] = 
+		xos match {
+			case xo :: resto => map2(xo, sequence(resto))(_ :: _)
+			case Nil => Some(Nil)
+		}
+
+	def test {
+		assert(sequence(Some(2) :: Some(1) :: Nil) == Some(2 :: 1 :: Nil))
+		assert(sequence(Some(2) :: None :: Nil) == None)
+		assert(sequence(Nil) == Some(Nil))
+	}
+}
+ex44.test
