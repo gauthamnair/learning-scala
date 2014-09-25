@@ -395,3 +395,123 @@ object ex324 {
 	}
 }
 ex324.test
+
+sealed trait Tree[+T]
+case class Leaf[T](value: T) extends Tree[T]
+case class Branch[T](left: Tree[T], right: Tree[T]) extends Tree[T]
+
+
+def testTreeSize(size: Tree[String] => Int) {
+	val left = Branch(Leaf("a"), Leaf("b"))
+	val right = Branch(Leaf("c"), Leaf("d"))
+	assert(size(left) == 3)
+	assert(size(Branch(left, right)) == 7)
+}
+
+object ex325 {
+	def size[T](t: Tree[T]): Int = t match {
+		case Leaf(_) => 1
+		case Branch(left, right) => 1 + size(left) + size(right)
+	}
+	def test {testTreeSize(size(_))}
+}
+ex325.test
+
+
+def testTreeMax(maximum: Tree[Int] => Int) {
+	val left = Branch(Leaf(1), Leaf(15))
+	val right = Branch(Leaf(5), Leaf(10))
+	assert(maximum(right) == 10)
+	assert(maximum(left) == 15)
+	assert(maximum(Leaf(3)) == 3)
+	assert(maximum(Branch(left, right)) == 15)
+}
+
+object ex326 {
+	def maximum(t: Tree[Int]): Int = t match {
+		case Leaf(value) => value
+		case Branch(l, r) => maximum(l) max maximum(r)
+	}
+	def test { testTreeMax(maximum(_)) }
+}
+ex326.test
+
+def testTreeDepth(depth: Tree[Int] => Int) {
+	val left = Branch(Leaf(1), Leaf(15))
+	val right = Branch(Leaf(5), Leaf(10))
+	assert(depth(Leaf(1)) == 0)
+	assert(depth(left) == 1)
+	assert(depth(right) == 1)
+	assert(depth(Branch(left, right)) == 2)
+	assert(depth(Branch(left, Leaf(1))) == 2)
+	assert(depth(Branch(Leaf(1), right)) == 2)
+	assert(depth(Branch(Leaf(1), Leaf(2))) == 1)
+}
+
+object ex327 {
+	def depth[T](t: Tree[T]): Int = t match {
+		case Leaf(_) => 0 
+		case Branch(l, r) => 1 + (depth(l) max depth(r))
+	}
+	def test { testTreeDepth(depth(_)) }
+}
+ex327.test
+
+def testTreeMapInt2Int(map: (Tree[Int]) => ((Int => Int) => Tree[Int])) {
+	val left = Branch(Leaf(1), Leaf(15))
+	val doubled = map(left)(2 * _)
+	assert(doubled == Branch(Leaf(2), Leaf(30)))
+}
+def testTreeMapInt2Boolean(map: (Tree[Int]) => ((Int => Boolean) => Tree[Boolean])) {
+	val right = Branch(Leaf(2), Leaf(3))
+	val areEven = map(right)(_ % 2 == 0)
+	assert(areEven == Branch(Leaf(true), Leaf(false)))
+}
+
+object ex328 {
+	def map[T, R](t: Tree[T])(f: T => R): Tree[R] = t match {
+		case Leaf(value) => Leaf(f(value))
+		case Branch(left, right) => Branch(map(left)(f), map(right)(f))
+	}
+	def test { 
+		testTreeMapInt2Int(map(_))
+		testTreeMapInt2Boolean(map(_)) }
+}
+ex328.test
+
+
+object ex329 {
+	def fold[T, R](t: Tree[T])
+						(branchOp: (R, R) => R, unit: T => R): R = 
+		t match {
+			case Leaf(value) => unit(value)
+			case Branch(l, r) => branchOp(
+									fold(l)(branchOp, unit), 
+									fold(r)(branchOp, unit))
+		}
+	def maximum(t: Tree[Int]): Int = fold(t)(
+									(x:Int, y:Int) => x max y, 
+									(x:Int) => x)
+
+	def depth[T](t: Tree[T]): Int = 
+		fold(t)((ldepth:Int, rdepth:Int) => 1 + (ldepth max rdepth),
+				(x:T) => 0)
+
+	def size[T](t: Tree[T]): Int =
+		fold(t)((lsize:Int, rsize:Int) => 1 + lsize + rsize, 
+				(x:T) => 1)
+
+	def map[T, R](t: Tree[T])(f: T => R): Tree[R] = 
+		fold(t)((l:Tree[R], r:Tree[R]) => Branch(l, r), 
+				(x:T) => Leaf(f(x)))
+
+
+	def test {
+		testTreeMax(maximum(_))
+		testTreeDepth(depth(_))
+		testTreeSize(size(_))
+		testTreeMapInt2Int(map(_))
+		testTreeMapInt2Boolean(map(_))
+	}
+}
+ex329.test
