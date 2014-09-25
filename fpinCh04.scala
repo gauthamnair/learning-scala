@@ -106,3 +106,16 @@ object ex42 {
 }
 ex42.test
 
+
+object ex43{
+	def map2[A, B, R](a: Option[A], b:Option[B])
+					(f: (A, B) => R): Option[R] =
+		a.flatMap(anA => b.map(aB => f(anA, aB)))
+
+	def test {
+		assert(map2(Some(1), Some(2))(_ + _) == Some(3))
+		assert(map2(None: Option[Int], Some(2))(_ + _) == None)
+		assert(map2(Some(1), None: Option[Int])(_ + _) == None)
+	}
+}
+ex43.test
