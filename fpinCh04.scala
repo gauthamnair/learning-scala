@@ -249,3 +249,56 @@ object ex46 {
 	}
 }
 ex46.test
+
+object ex47 {
+
+	def traverse[T, E, R](xs: List[T])(f: T => Either[E, R]): Either[E, List[R]] = 
+		xs match {
+			case x :: xrest => (f(x) map2 traverse(xrest)(f))(_ :: _)
+			case Nil => Right(Nil)
+		}
+
+	def sequence[E, R](xs: List[Either[E, R]]): Either[E, List[R]] = 
+		traverse(xs)(x => x)
+
+	def failsOnOddOrZero(x:Int): Either[String, Int] = {
+		if (x % 2 == 1) Left("was odd") 
+		else if (x == 0) Left("was zero")
+		else Right(x)
+	}
+
+	def test {
+		import ex46.safeInv
+		assert(traverse(List(1,2,3))(safeInv(_)) == Right(List(1,0,0)))
+		assert(traverse(List(1,2,0))(safeInv(_)) == Left("divide by zero"))
+		assert(traverse(List(2,1,0))(failsOnOddOrZero(_)) == Left("was odd"))
+		assert(traverse(List(2,0,1))(failsOnOddOrZero(_)) == Left("was zero"))
+
+		assert(sequence(List(2,1,0).map(failsOnOddOrZero)) == Left("was odd"))
+		assert(sequence(List(2,0,1).map(failsOnOddOrZero)) == Left("was zero"))
+		assert(sequence(List(2,4,6).map(failsOnOddOrZero)) == Right(List(2,4,6)))
+	}
+}
+ex47.test
+
+object ex48 {
+	sealed trait MultiEither[+E, +R] {
+		def map[R2](f: R => R2): MultiEither[E, R2]
+		def flatMap[E2 >: E, R2](f: R => MultiEither[E2, R2]): MultiEither[E2, R2]
+		def orElse[E2 >: E, R2 >: R](alternative: => MultiEither[E2, R2]): MultiEither[E2, R2]
+	}
+	case class Right[R](value: R) extends MultiEither[Nothing, R] {
+		def map[R2](f: R => R2): MultiEither[Nothing, R2] = Right(f(value))
+		def flatMap[E2, R2](f: R => MultiEither[E2, R2]): MultiEither[E2, R2] = f(value)
+		def orElse[E2, R2 >: R](alternative: => MultiEither[E2, R2]): MultiEither[E2, R2] = this
+	}
+	case class Left[E](errors: List[E]) extends MultiEither[E, Nothing] {
+		def map[R2](f: Nothing => R2): MultiEither[E, R2] = this
+		def flatMap[E2 >: E, R2](f: Nothing => MultiEither[E2, R2]): MultiEither[E2, R2] = this
+		def orElse[E2 >: E, R2](alternative: => MultiEither[E2, R2]): MultiEither[E2, R2] = 
+			alternative match {
+				case Left(alterrors) => Left(errors ::: alterrors)
+				case Right(x) => Right(x)
+			}
+	}
+}
