@@ -259,17 +259,35 @@ object ch05 {
 	}
 
 	object ex511 {
-		def unfold[R, S](startingState: S)(step: S => (R, S)): Stream[R] = {
-			val stepResult = step(startingState)
-			val nextState = stepResult._2
-			val thisResult = stepResult._1
-			Stream.cons(thisResult, unfold(nextState)(step))
+		def unfold[R, S](startingState: S)(step: S => Option[(R, S)]): Stream[R] = {
+			step(startingState) match {
+				case Some((newResult, nextState)) => Stream.cons(newResult, unfold(nextState)(step))
+				case None => Stream.empty
+			}
 		}
-		def fibs: Stream[Int] = {
-			unfold((0, 1))(state => (state._1, (state._2, state._1 + state._2)))
-		}
+		case class FibState(lagging: Int, leading: Int)
+		def fibStep(state: FibState): (Int, FibState) =
+			(state.lagging, FibState(state.leading, state.leading + state.lagging))
+		def fibs: Stream[Int] = unfold(FibState(0,1))(state => Some(fibStep(state)))
+
+		def from(n: Int): Stream[Int] = 
+			unfold(n)(x => Some(Tuple2(x, x + 1)))
+		def constant[T](theValue: T): Stream[T] = 
+			unfold(None)(x => Some(Tuple2(theValue, None)))
 		def test {
 			assert(fibs.take(7).toList == List(0, 1, 1, 2, 3, 5, 8))
+		}
+	}
+
+	object ex512 {
+		import ex511._
+		def test {
+			assert(fibs.take(7).toList == List(0, 1, 1, 2, 3, 5, 8))
+			assert(from(0).take(3).toList == List(0,1,2))
+			assert(from(0).find(_ > 20).getOrElse(-1) == 21)
+			assert(constant(7).take(3).toList == List(7,7,7))
+			assert(constant(5).map(2*_).take(3).toList == List(10,10,10))
+			// ommitted ones test. it is just constant(1)
 		}
 	}
 
@@ -288,5 +306,6 @@ object ch05 {
 		ex59.test
 		ex510.test
 		ex511.test
+		ex512.test
 	}
 }
