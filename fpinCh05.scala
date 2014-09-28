@@ -243,7 +243,7 @@ object ch05 {
 		}
 	}
 
-	object ex60 {
+	object ex510 {
 		def fibs: Stream[Int] = {
 			def fibStep(lastTwo: (Int, Int)): Stream[(Int, Int)] = {
 				val nextTwo = (lastTwo._2, lastTwo._1 + lastTwo._2)
@@ -254,7 +254,21 @@ object ch05 {
 			fibSteps.map(_._1)
 		}
 		def test {
-			// println(fibs.take(7).toList)
+			assert(fibs.take(7).toList == List(0, 1, 1, 2, 3, 5, 8))
+		}
+	}
+
+	object ex511 {
+		def unfold[R, S](startingState: S)(step: S => (R, S)): Stream[R] = {
+			val stepResult = step(startingState)
+			val nextState = stepResult._2
+			val thisResult = stepResult._1
+			Stream.cons(thisResult, unfold(nextState)(step))
+		}
+		def fibs: Stream[Int] = {
+			unfold((0, 1))(state => (state._1, (state._2, state._1 + state._2)))
+		}
+		def test {
 			assert(fibs.take(7).toList == List(0, 1, 1, 2, 3, 5, 8))
 		}
 	}
@@ -272,6 +286,7 @@ object ch05 {
 		ex57.test
 		ex58.test
 		ex59.test
-		ex60.test
+		ex510.test
+		ex511.test
 	}
 }
