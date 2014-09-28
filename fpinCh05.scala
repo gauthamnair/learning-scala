@@ -5,6 +5,7 @@ sealed trait Stream[+T] {
 	def toList: List[T]
 	def take(n: Int): Stream[T]
 	def takeWhile(satisfies: T => Boolean): Stream[T]
+	def headOption: Option[T]
 	final def exists(satisfies: T => Boolean): Boolean = 
 		this match {
 			case Cons(hF, tF) => satisfies(hF()) || tF().exists(satisfies)
@@ -37,6 +38,8 @@ sealed trait Stream[+T] {
 		this.foldRight(next)(Stream.cons(_, _))
 	final def flatMap[R](f: T => Stream[R]): Stream[R] =
 		this.foldRight(Empty: Stream[R])((a, b) => f(a).append(b))
+	final def find(satisfies: T => Boolean): Option[T] =
+		this.filter(satisfies).headOption
 }
 
 
@@ -44,6 +47,7 @@ case object Empty extends Stream[Nothing] {
 	def toList: List[Nothing] = Nil
 	def take(n:Int): Stream[Nothing] = this
 	def takeWhile(satisfies: Nothing => Boolean) = this
+	def headOption: Option[Nothing] = None
 }
 // This declaration below does *not* work: 
 // case class Cons[+T](headExpr: => T, tailExpr: => Stream[T]) extends Stream[T]
@@ -59,6 +63,7 @@ case class Cons[+T](headF: () => T, tailF: () => Stream[T]) extends Stream[T] {
 		if (satisfies(headF())) Cons(headF, () => tailF().takeWhile(satisfies))
 		else Empty
 	}
+	def headOption: Option[T] = Some(headF())
 }
 
 object Stream {
@@ -85,6 +90,12 @@ object Stream {
 		case Cons(hF, tF) => Some(tF())
 		case Empty => None
 	}
+
+	def constant[T](x: T): Stream[T] = Stream.cons(x, constant(x))
+
+	val ones = constant(0)
+
+	def from(n: Int = 0): Stream[Int] = Stream.cons(n, from(n + 1))
 
 	def test {
 		val s = Stream.cons(1, Stream.empty)
@@ -212,6 +223,39 @@ object ch05 {
 			assert(Stream(1,2).append(Stream()).toList == List(1,2))
 
 			assert(Stream(1,2).flatMap(toDbledStream(_)).toList == List(1,1,2,2))
+
+			assert(Stream(1,2,3).find(_ > 1).getOrElse(-1) == 2)
+			assert(Stream(1,2,3).find(_ > 4).getOrElse(-1) == -1)
+		}
+	}
+
+	object ex58 {
+		def test {
+			assert(Stream.constant(7).take(3).toList == List(7,7,7))
+			assert(Stream.constant(5).map(2*_).take(3).toList == List(10,10,10))
+		}
+	}
+
+	object ex59 {
+		def test {
+			assert(Stream.from(0).take(3).toList == List(0,1,2))
+			assert(Stream.from(0).find(_ > 20).getOrElse(-1) == 21)
+		}
+	}
+
+	object ex60 {
+		def fibs: Stream[Int] = {
+			def fibStep(lastTwo: (Int, Int)): Stream[(Int, Int)] = {
+				val nextTwo = (lastTwo._2, lastTwo._1 + lastTwo._2)
+				Stream.cons(nextTwo, fibStep(nextTwo))
+			}
+			val fibSteps: Stream[(Int, Int)] = Stream.cons((0,1), fibStep((0, 1)))
+			// In this arrangement we compute the n+1th fib number before returning the nth.
+			fibSteps.map(_._1)
+		}
+		def test {
+			// println(fibs.take(7).toList)
+			assert(fibs.take(7).toList == List(0, 1, 1, 2, 3, 5, 8))
 		}
 	}
 
@@ -226,5 +270,8 @@ object ch05 {
 		ex55.test
 		ex56.test
 		ex57.test
+		ex58.test
+		ex59.test
+		ex60.test
 	}
 }
