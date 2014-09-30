@@ -291,6 +291,86 @@ object ch05 {
 		}
 	}
 
+	object ex513 {
+		import ex511.unfold
+		def map[T,R](xs: Stream[T])(f: T => R): Stream[R] = 
+			unfold(xs)(x => x match {
+				case Cons(hF, tF) => Some(Tuple2(f(hF()), tF()))
+				case Empty => None
+				})
+
+		def zip[A, B](as: Stream[A], bs: Stream[B]): Stream[(A, B)] =
+			unfold(Tuple2(as, bs))({
+					case Tuple2(Cons(ahF, atF), Cons(bhF, btF)) => {
+						val heads = (ahF(), bhF())
+						val tails = (atF(), btF())
+						Some(heads, tails)
+					}
+					case _ => None
+					})
+
+		def zipAll[A, B](as: Stream[A], bs: Stream[B]): Stream[(Option[A], Option[B])] =
+			unfold(Tuple2(as,bs))({
+					case Tuple2(Cons(ahF, atF), Cons(bhF, btF)) => {
+						val heads = (Some(ahF()), Some(bhF()))
+						val tails = (atF(), btF())
+						Some(heads, tails)
+					}
+					case Tuple2(Cons(ahF, atF), Empty) => {
+						val heads = (Some(ahF()), None)
+						val tails = (atF(), Empty)
+						Some(heads, tails)
+					}
+					case Tuple2(Empty, Cons(bhF, btF)) => {
+						val heads = (None, Some(bhF()))
+						val tails = (Empty, btF())
+						Some(heads, tails)
+					}
+					case _ => None
+				})
+
+		def zipWith[A, B, R](as: Stream[A], bs: Stream[B])
+						(op: (A, B) => R): Stream[R] = zip(as, bs).map({case (a,b) => op(a,b)})
+
+		def take[T](xs: Stream[T], n:Int): Stream[T] = 
+			unfold(zip(Stream.from(0), xs))({
+				case Cons(headsF, tailsF) => {
+					val (i, x) = headsF()
+					if (i < n) Some((x, tailsF())) else None
+				}
+				case Empty => None
+				} )
+
+		def takeWhile[T](xs: Stream[T])(satisfies: T => Boolean): Stream[T] = 
+			unfold(xs)({
+				case Cons(headsF, tailsF) => {
+					val theHead = headsF()
+					if (satisfies(theHead)) Some((theHead, tailsF())) else None
+				}
+				case Empty => None
+				})
+
+
+		def test {
+			assert(map(Stream(1,2,3))(x => x).toList == List(1,2,3))
+			assert(map(Stream(1,2,3))(x => 2*x).toList == List(2,4,6))
+			assert(map(Stream.from(0))(x => 2*x).take(3).toList == List(0,2,4))
+
+			val zipped = zip(Stream.from(0), Stream("a","b","c"))
+			assert(zipped.toList == List((0, "a"), (1, "b"), (2, "c")))
+
+			val zippedWith = zipWith(Stream.from(0), Stream.constant(2))(_ + _)
+			assert(zippedWith.take(4).toList == List(2,3,4,5))
+
+			assert(take(Stream.from(2), 3).toList == List(2,3,4))
+			assert(takeWhile(Stream.from(0))(_ < 3).toList == List(0,1,2))
+
+			val allZipped = zipAll(Stream(1,2,3,4), Stream(1,2))
+			assert(allZipped.toList == List((Some(1), Some(1)), 
+				(Some(2),Some(2)), (Some(3), None), (Some(4), None) ))
+		}
+	}
+
 	def main(args: Array[String]) {
 		Stream.test
 		lazyPlay.test		
@@ -307,5 +387,6 @@ object ch05 {
 		ex510.test
 		ex511.test
 		ex512.test
+		ex513.test
 	}
 }
