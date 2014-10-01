@@ -204,7 +204,49 @@ object ch06 {
 			testMixed
 		}
 	}
+
+	def nonNegativeLessThan(n: Int): Rand[Int] = {
+		@annotation.tailrec
+		def tryNonNegativeLessThan(rng: RNG): (Int, RNG) = {
+			val (i, nextRNG) = nonNegativeInt(rng)
+			if (i / n >= Int.MaxValue / n) {
+				tryNonNegativeLessThan(nextRNG)
+			} else (i % n, nextRNG)
+		}
+		rng => tryNonNegativeLessThan(rng)
+	}
+
+	def flatMap[T, R](rand: Rand[T])(f: T => Rand[R]): Rand[R] = 
+		rng => {
+			val (x, nextRNG) = rand(rng)
+			val newRand = f(x)
+			newRand(nextRNG)
+		}
 	
+	object ex68 {
+		def nonNegativeLessThan(n:Int): Rand[Int] = 
+			flatMap(nonNegativeInt)(i => 
+				if ((i / n) >= (Int.MaxValue / n)){
+					nonNegativeLessThan(n)
+				} else unit(i))
+		def testInt {
+			val intAgain = flatMap(int)(unit)
+			val rng = SimpleRNG(42)
+			val (i, rng2) = intAgain(rng)
+			val (ip, rng2p) = int(rng)
+			assert(i == ip)
+			assert(rng2 == rng2p)
+		}	
+		def test {
+			testInt
+			val cap = Int.MaxValue / 2 + Int.MaxValue / 10
+			val lessThanCap = nonNegativeLessThan(cap)
+			val rng = SimpleRNG(42)
+			val tenLessThans = sequence(List.fill(10)(lessThanCap))
+			val (xs, rng2) = tenLessThans(rng)
+			assert(xs.forall(_ < cap))
+		}
+	}
 
 	def main(args: Array[String]) {
 		ex61.test
@@ -214,6 +256,7 @@ object ch06 {
 		ex65.test
 		ex66.test
 		ex67.test
+		ex68.test
 	}
 
 }
