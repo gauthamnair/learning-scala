@@ -371,6 +371,62 @@ object ch05 {
 		}
 	}
 
+	object ex513alt {
+		def zip[A, B](as: Stream[A], bs: Stream[B]): Stream[(A, B)] = ???
+		def zipAll[A, B](as: Stream[A], bs: Stream[B]): Stream[(Option[A], Option[B])] = ???
+		def take[T](xs: Stream[T], n:Int): Stream[T] = ??? // could do same as with a list.
+		def takeWhile[T](xs: Stream[T])(satisfies: T => Boolean): Stream[T] = xs match {
+				case Cons(hF, tF) => {
+						lazy val theHead = hF()
+						if (satisfies(theHead)) {
+							Stream.cons(theHead, takeWhile(tF())(satisfies) )
+						} else {
+							takeWhile(tF())(satisfies)
+						}
+					}
+				case Empty => Empty
+			}
+	}
+
+	object ex514 {
+		import ex513._
+		def check[T](ox: Option[T], oq: Option[T]): Boolean = {
+			ox match {
+				case None => false
+				case Some(x) => oq match {
+					case Some(q) => x == q
+					case None => true
+				}
+			}
+		}
+		def startsWith[T](xs: Stream[T], query: Stream[T]): Boolean = {
+			val zipped = zipAll(xs, query)
+			zipped.takeWhile({
+				case (_, Some(q)) => true
+				case _ => false
+			}).forall({
+				case (ox, oq) => check(ox, oq)
+			})
+		}
+		def test {
+			assert(startsWith(Stream(1,2,3), Stream(1,2)))
+		}
+	}
+
+	object ex515 {
+		import ex511.unfold
+		def tails[T](xs: Stream[T]): Stream[Stream[T]] = 
+			unfold(xs)(rest => rest match { 
+				case Empty => None
+				case Cons(headF, tailF) => Some((rest, tailF()))
+				}).append(Stream(Empty: Stream[T]))
+
+		def test {
+			val xstails = tails(Stream(1,2,3))
+			assert(xstails.map(_.toList).toList == List(List(1,2,3), List(2,3), List(3), List()))
+		}
+	}
+
 	def main(args: Array[String]) {
 		Stream.test
 		lazyPlay.test		
@@ -388,5 +444,7 @@ object ch05 {
 		ex511.test
 		ex512.test
 		ex513.test
+		ex514.test
+		ex515.test
 	}
 }
