@@ -272,6 +272,7 @@ object ch06 {
 		}
 	}
 
+
 	def main(args: Array[String]) {
 		ex61.test
 		ex62.test
