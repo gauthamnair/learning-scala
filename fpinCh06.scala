@@ -80,6 +80,21 @@ object ch06 {
 			val (d3, rng4) = double(rng3)
 			((d1, d2, d3), rng4)
 		}
+		def test {
+			val rng = SimpleRNG(42)
+			def testIntAndDouble {
+				val ((i,x), rng2) = intAndDouble(rng)	
+			}
+			testIntAndDouble
+			def testDoubleAndInt {
+				val ((x,i), rng2) = doubleAndInt(rng)
+			}
+			testDoubleAndInt
+			def testThreeDoubles {
+				val ((x1, x2, x3), rng2) = threeDoubles(rng)
+			}
+			testThreeDoubles
+		}
 	}
 
 	object ex64 {
@@ -93,10 +108,46 @@ object ch06 {
 			}
 			getNextInt(Nil, rng, count)
 		}
+		def test {
+			val rng = SimpleRNG(42)
+			val (xs, rng2) = ints(4)(rng)
+			assert(xs.length == 4)
+		}
+	}
+
+	type Rand[+T] = RNG => (T, RNG)
+
+	val int: Rand[Int] = _.nextInt
+
+	// a pass-through
+	def unit[T](a: T): Rand[T] = rng => (a, rng)
+
+	def map[T, R](rand: Rand[T])(f: T => R): Rand[R] = 
+		rng => {
+			val (x, rng2) = rand(rng)
+			(f(x), rng2)
+		}
+
+	def nonNegativeEven: Rand[Int] = map(nonNegativeInt)(i => i - i % 2)
+
+	object ex65 {
+		def double: Rand[Double] = map(int)(i => {
+			if (i == Int.MinValue) 0.0 else (i.abs.toDouble / Int.MaxValue.toDouble)
+			})
+
+		def test {
+			val rng = SimpleRNG(42)
+			val (x, rng2) = double(rng)
+			assert(x <= 1.0)
+			assert(x >= 0.0)
+		}
 	}
 
 	def main(args: Array[String]) {
 		ex61.test
 		ex62.test
+		ex63.test
+		ex64.test
+		ex65.test
 	}
 }
