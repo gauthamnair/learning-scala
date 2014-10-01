@@ -143,11 +143,77 @@ object ch06 {
 		}
 	}
 
+	def map2[A, B, C](ra: Rand[A], rb: Rand[B])(op: (A, B) => C): Rand[C] = 
+		rng => {
+			val (a, rng2) = ra(rng)
+			val (b, rng3) = rb(rng2)
+			(op(a, b), rng3)
+		}
+
+	object ex66 {
+		def test {
+			val rng = SimpleRNG(42)
+			val twoInts = map2(int, int)((_, _))
+			val ((i, j), rng2) = twoInts(rng)
+			val (i1, rng_1) = int(rng)
+			val (i2, rng_2) = int(rng_1)
+			assert(i == i1)
+			assert(j == i2)
+		}
+	}
+
+	def both[A, B](ra: Rand[A], rb:Rand[B]): Rand[(A, B)] = map2(ra, rb)((_, _))
+
+	val randIntDouble: Rand[(Int, Double)] = both(int, double)
+	val randDoubleInt: Rand[(Double, Int)] = both(double, int)
+
+	@annotation.tailrec
+	def randSeqStepper[T](results: List[T], rands: List[Rand[T]], rng: RNG): (List[T], RNG) =
+		rands match {
+			case r :: restOfRands => {
+				val (x, newRNG) = r(rng)
+				randSeqStepper(x :: results, restOfRands, newRNG)
+			}
+			case Nil => (results.reverse, rng)
+		}
+	def sequence[T](fs: List[Rand[T]]): Rand[List[T]] = 
+		rng => randSeqStepper(Nil, fs, rng)
+
+	object ex67 {
+		def ints(n: Int): Rand[List[Int]] = sequence(List.fill(n)(int))
+		def testMixed {
+			val threeMixedInts = sequence(List(int, nonNegativeInt, nonNegativeEven): List[Rand[Int]])
+			val rng = SimpleRNG(42)
+			val (xs, rngEnd) = threeMixedInts(rng)
+			val (i1, rng2) = int(rng)
+			val (i2, rng3) = nonNegativeInt(rng2)
+			val (i3, rng4) = nonNegativeEven(rng3)
+			assert(xs == List(i1, i2, i3))
+		}
+		def testInts {
+			val threeInts = ints(3)
+			val rng = SimpleRNG(42)
+			val (xs, rngEnd) = threeInts(rng)
+			val (i1, rng2) = int(rng)
+			val (i2, rng3) = int(rng2)
+			val (i3, rng4) = int(rng3)
+			assert(xs == List(i1, i2, i3))
+		}
+		def test {
+			testInts
+			testMixed
+		}
+	}
+	
+
 	def main(args: Array[String]) {
 		ex61.test
 		ex62.test
 		ex63.test
 		ex64.test
 		ex65.test
+		ex66.test
+		ex67.test
 	}
+
 }
