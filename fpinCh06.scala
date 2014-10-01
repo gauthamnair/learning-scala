@@ -248,6 +248,30 @@ object ch06 {
 		}
 	}
 
+	object ex69 {
+		def map[T,R](rand: Rand[T])(f: T => R): Rand[R] = 
+			flatMap(rand)(x => unit(f(x)))
+		def map2[A, B, C](ra: Rand[A], rb: Rand[B])(op: (A, B) => C): Rand[C] =
+			flatMap(ra)(a => 
+				flatMap(rb)(b => 
+					unit(op(a,b))
+					)
+				)
+		// Can't do this because flatMap is not defined as a method on Rand:
+		// (but otherwise would work)
+		// def map2[A, B, C](ra: Rand[A], rb: Rand[B])(op: (A, B) => C): Rand[C] = 
+		// 	for (a <- ra; b <- rb) yield op(a, b)
+
+		def test {
+			val rng = SimpleRNG(42)
+			val twoInts = map2(int, nonNegativeInt)(_ + _)
+			val (theSum, rng2) = twoInts(rng)
+			val (i1, rng_1) = int(rng)
+			val (i2, rng_2) = nonNegativeInt(rng_1)
+			assert(theSum == (i1 + i2))
+		}
+	}
+
 	def main(args: Array[String]) {
 		ex61.test
 		ex62.test
@@ -257,6 +281,7 @@ object ch06 {
 		ex66.test
 		ex67.test
 		ex68.test
+		ex69.test
 	}
 
 }
