@@ -27,6 +27,18 @@ object ch10 {
 			assert(m.op(m.zero, b) == b)
 		}
 		opTests.foreach { case ((a,b), r) => testOneExample(a,b,r) }
+		val allTestInputs = opTests.flatMap {case((a,b), r) => List(a,b,r)}
+		val allTriples = allTestInputs.distinct.combinations(3).toList
+		def testAssociate(a: T, b: T, c: T) {
+			assert(m.op(m.op(a,b), c) == m.op(a, m.op(b,c)))
+		}
+		def testTriple(triple: Seq[T]) {
+			triple.toList.permutations.toList.foreach {
+				case x1 :: x2 :: x3 :: Nil => testAssociate(x1, x2, x3)
+				case _ => throw new Exception
+			}
+		}
+		allTriples.foreach { testTriple(_) }
 	}
 
 	object ex10_1 {
@@ -59,8 +71,24 @@ object ch10 {
 		}
 	}
 
+	object ex10_2 {
+		def optionMonoid[T] = new Monoid[Option[T]] {
+			def op(x: Option[T], y: Option[T]): Option[T] = 
+				x.orElse(y)
+			val zero: Option[T] = None
+		}
+		def test {
+			val intOptionMonoid: Monoid[Option[Int]] = optionMonoid
+			testMonoid(intOptionMonoid,
+				(Some(1), Some(2)) -> Some(1),
+				(Some(2), Some(1)) -> Some(2),
+				(None, Some(3)) -> Some(3))
+		}
+	}
+
 	def main(args: Array[String]) {
 		ex10_1.test
+		ex10_2.test
 	}
 
 }
