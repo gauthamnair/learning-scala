@@ -86,9 +86,28 @@ object ch10 {
 		}
 	}
 
+	object ex10_3 {
+		def endoMonoid[T] = new Monoid[T => T] {
+			def op(fa: T => T, fb: T => T): T => T = 
+				x => fa(fb(x))
+			val zero: T => T = x => x
+		}
+		def test {
+			// how would I?
+		}
+	}
+
+	object ex10_4 {
+		def test {
+			println("Missing exercise 10.4\n")
+		}
+	}
+
 	def main(args: Array[String]) {
 		ex10_1.test
 		ex10_2.test
+		ex10_3.test
+		ex10_4.test
 	}
 
 }
