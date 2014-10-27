@@ -223,6 +223,64 @@ object ch10 {
 		}
 	}
 
+	object ex10_10 {
+		sealed trait WC
+		case class Stub(chars: String) extends WC
+		case class Part(
+			lStub: String, words: Int, rStub: String) extends WC
+
+// if a lStub combines with an rStub that makes a new word.
+
+		def combine(x: WC, y: WC): WC =
+			(x,y) match {
+				case (Part(l1, w1, r1), Part(l2, w2, r2)) => {
+					if (r1 == "" && l2 == "") {
+						Part(l1, w1 + w2, r2)
+					} else Part(l1, w1 + w2 + 1, r2)
+				}
+				case (Part(l1, w1, r1), Stub(r)) => 
+					Part(l1, w1, r1 +  r)
+				case (Stub(l), Part(l2, w2, r2)) =>
+					Part(l + l2, w2, r2)
+				case (Stub(l), Stub(r)) => Stub(l + r)
+			}
+		
+
+		val wcMonoid = new Monoid[WC] {
+			def op(x: WC, y: WC): WC = combine(x, y)
+			def zero = Stub("")
+		}
+
+		
+		def charToWC(c: Char): WC = {
+			if (c.toString.trim == "") {
+				Part("", 0, "")
+			} else Stub(c.toString)
+		}
+
+		import ex10_7.foldMap
+		def countWords(x: String): Int = {
+			val theCount: WC = foldMap(x, wcMonoid)(charToWC(_))
+			theCount match {
+				case Stub(_) => 1
+				case Part(lStub, words, rStub) => {
+					val lEdge = if (lStub == "") 0 else 1
+					val rEdge = if (rStub == "") 0 else 1
+					words + lEdge + rEdge
+				}
+			}
+		}
+	}
+
+	object ex10_11 {
+		import ex10_10.countWords
+		def test {
+			assert(countWords("Mary had a") == 3)
+			assert(countWords("     ") == 0)
+			assert(countWords("   lobster   sticks  ") == 2)
+		}
+	}
+
 	def main(args: Array[String]) {
 		ex10_1.test
 		ex10_2.test
@@ -231,6 +289,7 @@ object ch10 {
 		ex10_6.test
 		ex10_7.test
 		ex10_9.test
+		ex10_11.test
 	}
 
 }
