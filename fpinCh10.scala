@@ -156,12 +156,35 @@ object ch10 {
 		}
 	}
 
+	object ex10_7 {
+		def foldMap[A, B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): B = {
+			if (v.length == 0) {
+				m.zero
+			} else if (v.length == 1) {
+				f(v(0))
+			} else {
+				val (left, right) = v.splitAt(v.length / 2)
+				val leftResult = foldMap(left, m)(f)
+				val rightResult = foldMap(right, m)(f)
+				m.op(leftResult, rightResult)
+			}
+		}
+
+		def test {
+			// import ex10_1.intAddition
+			val xs = Vector(1,2,3,4)
+			val aslist = foldMap(xs, listMonoid[Int])(x => List(x, x))
+			assert(aslist == List(1,1,2,2,3,3,4,4))
+		}
+	}
+
 	def main(args: Array[String]) {
 		ex10_1.test
 		ex10_2.test
 		ex10_3.test
 		ex10_4.test
 		ex10_6.test
+		ex10_7.test
 	}
 
 }
