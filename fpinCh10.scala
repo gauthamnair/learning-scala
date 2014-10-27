@@ -178,6 +178,51 @@ object ch10 {
 		}
 	}
 
+	object ex10_9 {
+		case class Bounds(min: Int, max: Int)
+
+		def combine(b1: Bounds, b2: Bounds) = 
+			Bounds(b1.min min b2.min, b1.max max b2.max)
+
+		case class OrderingInfo(bounds: Bounds, ordered: Boolean)
+
+		def adjoin(left: OrderingInfo, right: OrderingInfo): OrderingInfo =  {
+			val OrderingInfo(lb, lordered) = left
+			val OrderingInfo(rb, rordered) = right
+
+			val ordered = lordered && rordered && (lb.max <= rb.min)
+			val bounds = combine(lb, rb)
+
+			OrderingInfo(bounds, ordered)
+		}
+
+		val orderingMonoid = new Monoid[Option[OrderingInfo]] {
+			def op(l: Option[OrderingInfo], r: Option[OrderingInfo]) = {
+				val combined = 
+					l.flatMap(loinfo => 
+						r.map(roinfo => adjoin(loinfo, roinfo)))
+				combined orElse l orElse r
+			}
+			def zero = None: Option[OrderingInfo]
+		}
+
+		import ex10_7.foldMap
+		def isOrdered(v: IndexedSeq[Int]): Boolean = {
+			val oInfo = foldMap(v, orderingMonoid)(
+				x => Some(OrderingInfo(Bounds(x,x), true)))
+			oInfo match {
+				case Some(OrderingInfo(_, ordered)) => ordered
+				case None => true
+			}
+		}
+
+		def test {
+			assert(isOrdered(Vector(1,2,3,10)))
+			assert(!isOrdered(Vector(1,2,10,3)))
+			assert(isOrdered(Vector[Int]()))
+		}
+	}
+
 	def main(args: Array[String]) {
 		ex10_1.test
 		ex10_2.test
@@ -185,6 +230,7 @@ object ch10 {
 		ex10_4.test
 		ex10_6.test
 		ex10_7.test
+		ex10_9.test
 	}
 
 }
