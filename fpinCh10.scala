@@ -281,6 +281,99 @@ object ch10 {
 		}
 	}
 
+	import scala.language.higherKinds
+	trait Foldable[F[_]] {
+		  def foldRight[A,B](as: F[A])(z: B)(f: (A,B) => B): B
+		  def foldLeft[A,B](as: F[A])(z: B)(f: (B,A) => B): B
+		  def foldMap[A,B](as: F[A])(f: A => B)(mb: Monoid[B]): B
+		  def concatenate[A](as: F[A])(m: Monoid[A]): A =
+		    foldLeft(as)(m.zero)(m.op)
+		  
+		  def toList[A](as: F[A]): List[A] = foldRight(as)(Nil: List[A])(_ :: _)
+	}
+
+
+	object ex10_12 {
+		val listFolding = new Foldable[List] {
+			def foldRight[A,B](as: List[A])(z: B)(f: (A,B) => B): B =
+				as.foldRight(z)(f)
+			def foldLeft[A,B](as: List[A])(z: B)(f: (B,A) => B): B =
+				as.foldLeft(z)(f)
+			def foldMap[A,B](as: List[A])(f: A => B)(mb: Monoid[B]): B =
+				as.foldLeft(mb.zero)((b, a) => mb.op(b, f(a)))
+		}
+
+		println("Missing most of exercise 10.12")
+	}
+
+	object ex10_13 {
+		sealed trait Tree[+A]
+		case class Leaf[A](value: A) extends Tree[A]
+		case class Branch[A](left: Tree[A], right: Tree[A]) extends Tree[A]
+
+		val treeFolding = new Foldable[Tree] {
+			def foldRight[A,B](as: Tree[A])(z: B)(f: (A,B) => B): B = {
+				as match {
+					case Leaf(x) => f(x, z)
+					case Branch(left, right) => 
+						foldRight(left)(foldRight(right)(z)(f))(f)
+				}
+			}
+			def foldLeft[A,B](as: Tree[A])(z: B)(f: (B,A) => B): B = {
+				as match {
+					case Leaf(x) => f(z, x)
+					case Branch(left, right) =>
+						foldLeft(right)(foldLeft(left)(z)(f))(f)
+				}
+			}
+			def foldMap[A,B](as: Tree[A])(f: A => B)(mb: Monoid[B]): B = {
+				as match {
+					case Leaf(x) => f(x)
+					case Branch(left, right) => 
+						mb.op(foldMap(left)(f)(mb), foldMap(right)(f)(mb))
+				}
+			}
+		}
+	}
+
+	object ex10_14 {
+		val optionFolding = new Foldable[Option] {
+			def foldRight[A,B](as: Option[A])(z: B)(f: (A,B) => B): B = 
+				as match {
+					case Some(a) => f(a, z)
+					case None => z
+				}
+			def foldLeft[A,B](as: Option[A])(z: B)(f: (B,A) => B): B = 
+				as match {
+					case Some(a) => f(z, a)
+					case None => z
+				}
+			def foldMap[A,B](as: Option[A])(f: A => B)(mb: Monoid[B]): B =
+				as match {
+					case Some(a) => f(a)
+					case None => mb.zero
+				}
+		}
+
+		def test {
+			val x = Some(3)
+			val notx = None
+			assert(optionFolding.foldRight(x)(Nil: List[Int])(_ :: _) == List(3))
+			assert(optionFolding.foldRight(notx)(Nil: List[Int])(_ :: _) == List[Int]())
+		}
+	}
+
+	object ex10_15 {
+		def test {
+			import ex10_13.{Tree, Leaf, Branch, treeFolding}
+			val l = Branch(Leaf(1), Leaf(2))
+			val r = Branch(Leaf(3), Leaf(4))
+			val t = Branch(l, r)
+			val tasList = treeFolding.toList(t)
+			assert(tasList == List(1,2,3,4))
+		}
+	}
+
 	def main(args: Array[String]) {
 		ex10_1.test
 		ex10_2.test
@@ -290,6 +383,8 @@ object ch10 {
 		ex10_7.test
 		ex10_9.test
 		ex10_11.test
+		ex10_14.test
+		ex10_15.test
 	}
 
 }
