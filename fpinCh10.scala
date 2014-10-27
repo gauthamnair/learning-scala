@@ -86,14 +86,24 @@ object ch10 {
 		}
 	}
 
+	def dual[T](m: Monoid[T]): Monoid[T] = new Monoid[T] {
+		def op(x: T, y: T): T = m.op(y, x)
+		val zero = m.zero
+	}
+
 	object ex10_3 {
 		def endoMonoid[T] = new Monoid[T => T] {
 			def op(fa: T => T, fb: T => T): T => T = 
 				x => fa(fb(x))
 			val zero: T => T = x => x
 		}
+
+		def function1CompositionMonoid[T] = endoMonoid[T]
+		def function1AndThenMonoid[T] = dual(endoMonoid[T])		
+
 		def test {
 			// how would I?
+			// actually should use the foldMap and such
 		}
 	}
 
@@ -103,11 +113,55 @@ object ch10 {
 		}
 	}
 
+	object ex10_5 {
+		def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B =
+			as.foldLeft(m.zero)((b, a) => m.op(b, f(a)))
+	}
+
+	object ex10_6 {
+		import ex10_5.foldMap
+		import ex10_3.{function1CompositionMonoid, function1AndThenMonoid}
+		def foldRight[T, R](xs: List[T], zero: R)(op: (T, R) => R): R = {
+			val composedFunc = 
+				foldMap(
+					xs, function1CompositionMonoid[R])(
+					(element: T) => (accumulatedSoFar: R) => op(element, accumulatedSoFar))
+			composedFunc(zero)
+		}
+
+		def foldLeft[T, R](xs: List[T], zero: R)(op: (R, T) => R): R = {
+			val composedFunc = 
+				foldMap(
+					xs, function1AndThenMonoid[R])(
+					(element: T) => (accumulatedSoFar: R) => op(accumulatedSoFar, element))
+			composedFunc(zero)
+		}
+
+		def test {
+			val xs = List(1,2,3)
+			def testRight {
+				val summed = foldRight(xs, 0)(_ + _)
+				assert(summed == 6)
+				val reconstituted = foldRight(xs, Nil: List[Int])(_ :: _)
+				assert(reconstituted == xs)
+			}
+			testRight
+			def testLeft {
+				val summed = foldLeft(xs, 0)(_ + _)
+				assert(summed == 6)
+				val reversed = foldLeft(xs, Nil: List[Int])((revd, elem) => elem :: revd)
+				assert(reversed == xs.reverse)
+			}
+			testLeft		
+		}
+	}
+
 	def main(args: Array[String]) {
 		ex10_1.test
 		ex10_2.test
 		ex10_3.test
 		ex10_4.test
+		ex10_6.test
 	}
 
 }
