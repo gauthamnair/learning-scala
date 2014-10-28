@@ -374,6 +374,75 @@ object ch10 {
 		}
 	}
 
+	object ex10_16 {
+		def productMonoid[A,B](ma: Monoid[A], mb: Monoid[B]) = 
+			new Monoid[(A,B)] {
+				def op(x: (A,B), y: (A,B)): (A,B) = 
+					(ma.op(x._1, y._1), mb.op(x._2, y._2))
+				val zero = (ma.zero, mb.zero)
+			}
+	}
+
+	def mapMergeMonoid[K, V](valueMonoid: Monoid[V]) = 
+		new Monoid[Map[K, V]] {
+
+			def zero = Map[K,V]()
+
+			def op(a: Map[K,V], b: Map[K,V]): Map[K,V] = {
+				val allKeys = a.keySet ++ b.keySet
+				def combineValuesForKey(key: K): V = {
+					val fromA = a.getOrElse(key, valueMonoid.zero)
+					val fromB = b.getOrElse(key, valueMonoid.zero)
+					valueMonoid.op(fromA, fromB)
+				} 
+				val emptyMap = zero
+				def addCombinedToMap(theMap: Map[K,V], key: K) = 
+					theMap.updated(key, combineValuesForKey(key))
+
+				allKeys.foldLeft(emptyMap)(addCombinedToMap(_,_))
+			}
+		}
+
+	object ex10_17 {
+		import ex10_1.intAddition
+
+		def functionMonoid[A,B](mb: Monoid[B]): Monoid[A => B] = 
+			new Monoid[A => B] {
+				def zero = 
+					x => mb.zero
+				def op(f1: A => B, f2: A => B) = 
+					x => mb.op(f1(x), f2(x))
+			}
+
+		def test {
+			val stringCountMonoid: Monoid[Map[String, Int]] = 
+				mapMergeMonoid(intAddition)
+			val m1 = Map("cat" -> 2, "dog" -> 4)
+			val m2 = Map("parrot" -> 1, "dog" -> 3)
+			val m12 = stringCountMonoid.op(m1, m2)
+			assert(m12.getOrElse("dog", 0) == 4 + 3)
+			assert(m12.getOrElse("cat", 0) == 2)
+			assert(m12.getOrElse("parrot", 0) == 1)
+		}
+	}
+
+	object ex10_18 {
+
+		import ex10_1.intAddition
+		import ex10_7.foldMap
+
+		def bag[A](as: IndexedSeq[A]): Map[A, Int] = {
+			val baggingMonoid = mapMergeMonoid[A, Int](intAddition)
+			foldMap(as, baggingMonoid)(x => Map(x -> 1))
+		}
+
+		def test {
+			val bagged = bag(Vector("a", "rose", "is", "a", "rose"))
+			assert(bagged("rose") == 2)
+			assert(bagged("is") == 1)
+		}
+	}
+
 	def main(args: Array[String]) {
 		ex10_1.test
 		ex10_2.test
@@ -385,6 +454,8 @@ object ch10 {
 		ex10_11.test
 		ex10_14.test
 		ex10_15.test
+		ex10_17.test
+		ex10_18.test
 	}
 
 }
